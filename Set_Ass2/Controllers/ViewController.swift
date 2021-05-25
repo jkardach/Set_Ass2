@@ -30,6 +30,7 @@ class ViewController: UIViewController {
         newGameButton.layer.cornerRadius = cornerRadius
         deal3MoreButton.layer.cornerRadius = cornerRadius
         cheatButton.layer.cornerRadius = cornerRadius
+        cheatButton.pulsate()
         gameScore.text = "Score = 0"
         tauntLabel.text = " "
         
@@ -125,9 +126,9 @@ class ViewController: UIViewController {
         tauntLabel.text = ""
         match = game.selectCard(card: getCardFrom(sender.tag)!)
         if match {
-            let selectedButtons = getButtonFromSelectedCards(cards: game.visibleCards)
+            let selectedButtons = getButtonFromSelectedCards(cards: game.selectedCards)
             for button in selectedButtons {
-                button.pulsate()
+                button.flash()
             }
         }
         updateView()
@@ -218,7 +219,7 @@ extension UIButton {
         pulse.fromValue = 0.98
         pulse.toValue = 1.0
         pulse.autoreverses = true
-        pulse.repeatCount = 2
+        pulse.repeatCount = .infinity
         pulse.initialVelocity = 0.5
         pulse.damping = 1.0
         layer.add(pulse, forKey: nil)
