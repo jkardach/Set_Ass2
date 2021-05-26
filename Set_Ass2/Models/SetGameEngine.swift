@@ -8,6 +8,10 @@
 import Foundation
 
 struct SetGameEngine {
+    // scoring for game
+    let matchScore = 4
+    let misMatchScore = -2
+    
     private var deck = Deck()   // get a deck of cards
     var visibleCards = [Card]() // cards that are face-up
     var selectedCards = [Card]()// currently selected cards
@@ -29,8 +33,9 @@ struct SetGameEngine {
     // selects a card.  If three have been selected, check for match (true if match)
     // if three already selected, empty selectedCards array and add card
     // need to check for the same card for deselect
-    mutating func selectCard(card: Card) -> Bool {
-        var match = false;
+    mutating func selectCard(card: Card) -> Bool? {
+        score = 0
+        var match: Bool?
         if deSelected(card: card) { return false }  // if selected same card, deselect
         // remove visible cards if previous was a match
         removeVisibleCardsIfWasAMatch()  // if was a match, remove selected cards
@@ -40,8 +45,8 @@ struct SetGameEngine {
         }
         if selectedCards.count == 3 {  // 3 cards, check for a match
             match = Card.setMatch(cards: selectedCards)
-            score +=  match ? 2 : -1    // +2 if match, -1 if not
             matchedCards = matchedCards + selectedCards  // keep a copy of matched cards
+            score = match! ? matchScore : misMatchScore
         }
         
         return match
@@ -101,11 +106,15 @@ struct SetGameEngine {
         return !deck.isEmpty() && (visibleCards.count + 3 <= tableCards || isMatch)
     }
     
-    func isGameOver() -> Bool {
-        if deck.isEmpty() && visibleCards.count == 0 {
+    mutating func isGameOver() -> Bool {
+        if deck.isEmpty() && visibleCards.count == 0 || deck.isEmpty() && !areTheirMatches() {
             return true
         }
         return false
+    }
+    
+    mutating func clearSelectedCards() {
+        selectedCards.removeAll()
     }
     
     mutating func areTheirMatches() -> Bool {
