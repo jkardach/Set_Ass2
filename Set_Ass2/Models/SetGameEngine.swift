@@ -16,7 +16,7 @@ struct SetGameEngine {
     var visibleCards = [Card]() // cards that are face-up
     var selectedCards = [Card]()// currently selected cards
     var matchedCards = [Card]() // list of matched cards
-    var score = 0
+    private(set) var score = 0
     var cardsLeft: Int {
         return deck.count() + visibleCards.count
     }

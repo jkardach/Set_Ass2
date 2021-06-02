@@ -13,25 +13,31 @@ class ViewController: UIViewController {
     @IBOutlet var setButtons: [UIButton]!  // Cards on the Screen
     @IBOutlet var deal3MoreButton: UIButton!
     @IBOutlet var newGameButton: UIButton!
-    @IBOutlet var tauntLabel: UILabel!
+    @IBOutlet var tauntLabel: UILabel! {
+        didSet {
+            tauntLabel.text = ""
+        }
+    }
     @IBOutlet var cheatButton: UIButton!
     @IBOutlet var iPhoneButton: UIButton!
     
-    let cornerRadius: CGFloat = 8.0
-    let multipleLines = 0
+    let CORNER_RADIUS: CGFloat = 8.0
+    let MULTIPLE_LINES = 0
+    let SHAPES = ["▲", "●", "■"]    // shapes (triangle, circle, square)
+    let COLORS = [#colorLiteral(red: 1, green: 0.1491314173, blue: 0, alpha: 1), #colorLiteral(red: 0.3411764801, green: 0.6235294342, blue: 0.1686274558, alpha: 1), #colorLiteral(red: 0.5568627715, green: 0.3529411852, blue: 0.9686274529, alpha: 1)]       // colors (red, green, purple)
+    let SHADED_ALPHAS = [1, 1, 0.3];  // shaded index (outline, solid, shaded)
+    let SHADED_STROKEWIDTH = [-15, 15, 15] // shaded index (outline, solid, shaded)
+    
     var game: SetGameEngine!
-    let shapes = ["▲", "●", "■"]    // shapes
-    let colors = [#colorLiteral(red: 1, green: 0.1491314173, blue: 0, alpha: 1), #colorLiteral(red: 0.3411764801, green: 0.6235294342, blue: 0.1686274558, alpha: 1), #colorLiteral(red: 0.5568627715, green: 0.3529411852, blue: 0.9686274529, alpha: 1)]       // colors
-    let shadedAlpha = [1, 1, 0.3];  // shaded index
-    let shadedStrokeWidth = [-15, 15, 15] // shaded index
     var match = false
     var start: Date?
     var timer = Timer()
     
     // used for iphone AutoPlay
-    var playerScore = 0
-    var iphoneScore = 0
+    var playerScore = 0     // keeps track of player's score
+    var iphoneScore = 0     // keeps track of iphone score
     
+    // anytime score is set, updates UILabel
     var score: Int = 0 {
         didSet {
             gameScore.text = "Score: \(score)"
@@ -41,16 +47,13 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
-        newGameButton.layer.cornerRadius = cornerRadius
-        deal3MoreButton.layer.cornerRadius = cornerRadius
-        cheatButton.layer.cornerRadius = cornerRadius
-        cheatButton.pulsate()
-        iPhoneButton.layer.cornerRadius = cornerRadius
+        newGameButton.layer.cornerRadius = CORNER_RADIUS
+        deal3MoreButton.layer.cornerRadius = CORNER_RADIUS
+        cheatButton.layer.cornerRadius = CORNER_RADIUS
+        iPhoneButton.layer.cornerRadius = CORNER_RADIUS
         
-        score = 0
-        tauntLabel.text = " "
         tauntLabel.lineBreakMode = .byWordWrapping
-        tauntLabel.numberOfLines = 0
+        tauntLabel.numberOfLines = MULTIPLE_LINES
         
         initGame()
     }
@@ -64,19 +67,22 @@ class ViewController: UIViewController {
         // show the startcards
         for index in 0..<game.tableCards {
             let button = setButtons[index]
-            button.titleLabel?.numberOfLines = multipleLines
+            button.titleLabel?.numberOfLines = MULTIPLE_LINES
             button.setTitle(nil, for: .normal)
             button.setAttributedTitle(nil, for: .normal)
-            button.layer.cornerRadius = cornerRadius
+            button.layer.cornerRadius = CORNER_RADIUS
+            button.layer.borderWidth = 3
             button.isEnabled = false
             
             if index < game.startCards {
                 button.backgroundColor = UIColor.white
+                button.layer.borderColor = UIColor.white.cgColor // same as background
                 let card = game.visibleCards[index]
                 showCard(from: button, and: card)
                 button.tag = card.id        // associate the button with the card
                 button.isEnabled = true
             } else {
+                button.layer.borderColor = UIColor.systemBlue.cgColor // same as background
                 button.backgroundColor = UIColor.systemBlue
                 button.tag = -1
                 button.isEnabled = false
@@ -95,18 +101,18 @@ class ViewController: UIViewController {
                 let button = self.setButtons[index]
                 button.setTitle(nil, for: .normal)
                 button.setAttributedTitle(nil, for: .normal)
-                button.layer.borderColor = UIColor.clear.cgColor
+                //button.layer.borderColor = UIColor.systemBlue.cgColor // same as background
                 button.isEnabled = false
                 if index < self.game.visibleCards.count { // visible cards
                     button.isEnabled = true
-                    button.layer.borderWidth = 0.0
+                    //button.layer.borderWidth = 0.0
                     button.backgroundColor = UIColor.white
                     let card = self.game.visibleCards[index]
                     self.showCard(from: button, and: card)
                     button.tag = card.id        // associate the button with the card
                     
                     if self.game.selectedCards.contains(card) {
-                        button.layer.borderWidth = 3.0
+                        //button.layer.borderWidth = 3.0
                         if self.match {
                             // show a match
                             button.layer.borderColor = UIColor.green.cgColor
@@ -114,6 +120,9 @@ class ViewController: UIViewController {
                             // select the card
                             button.layer.borderColor = UIColor.blue.cgColor
                         }
+                    } else {
+                        // not selected, but visible
+                        button.layer.borderColor = UIColor.white.cgColor
                     }
                     
                 } else if(index < self.game.cardsLeft) {  // flipped down cards
@@ -256,22 +265,33 @@ class ViewController: UIViewController {
         
     }
     
+    // gets called when device is rotated
+    override func didRotate(from fromInterfaceOrientation: UIInterfaceOrientation) {
+        updateView()
+    }
+
+    
     // this function creates an attributed string symbol from a card
     func symbol(card: Card) -> NSAttributedString {
         func getSymbol(card: Card) -> NSAttributedString {
             let font = UIFont.systemFont(ofSize: 30)
             let attributes: [NSAttributedString.Key: Any] = [
                 .font: font,
-                .foregroundColor: colors[card.color.rawValue].withAlphaComponent(CGFloat(shadedAlpha[card.shading.rawValue])),
-                .strokeWidth: shadedStrokeWidth[card.shading.rawValue],
-                .strokeColor: colors[card.color.rawValue].withAlphaComponent(CGFloat(shadedAlpha[card.shading.rawValue]))
+                .foregroundColor: COLORS[card.color.rawValue].withAlphaComponent(CGFloat(SHADED_ALPHAS[card.shading.rawValue])),
+                .strokeWidth: SHADED_STROKEWIDTH[card.shading.rawValue],
+                .strokeColor: COLORS[card.color.rawValue].withAlphaComponent(CGFloat(SHADED_ALPHAS[card.shading.rawValue]))
             ]
-            return NSAttributedString(string: shapes[card.shape.rawValue], attributes: attributes)
+            return NSAttributedString(string: SHAPES[card.shape.rawValue], attributes: attributes)
         }
         let symbol = getSymbol(card: card)
         var result = symbol
         for _ in 0..<card.number.rawValue-1 {
-            result += NSAttributedString(string: "\n") + symbol
+            if UIDevice.current.orientation == UIDeviceOrientation.landscapeLeft ||
+                UIDevice.current.orientation == UIDeviceOrientation.landscapeRight {
+                result += symbol
+            } else {
+                result += NSAttributedString(string: "\n") + symbol
+            }
         }
         return result
     }
@@ -291,17 +311,17 @@ extension NSAttributedString {
 }
 
 extension UIButton {
-    func pulsate() {
-        let pulse = CASpringAnimation(keyPath: "transform.scale")
-        pulse.duration = 0.4
-        pulse.fromValue = 0.98
-        pulse.toValue = 1.0
-        pulse.autoreverses = true
-        pulse.repeatCount = .infinity
-        pulse.initialVelocity = 0.5
-        pulse.damping = 1.0
-        layer.add(pulse, forKey: nil)
-    }
+//    func pulsate() {
+//        let pulse = CASpringAnimation(keyPath: "transform.scale")
+//        pulse.duration = 0.4
+//        pulse.fromValue = 0.98
+//        pulse.toValue = 1.0
+//        pulse.autoreverses = true
+//        pulse.repeatCount = .infinity
+//        pulse.initialVelocity = 0.5
+//        pulse.damping = 1.0
+//        layer.add(pulse, forKey: nil)
+//    }
     func flash(_ action: (() -> Void)? = nil) {
         let flash = CABasicAnimation(keyPath: "opacity")
         flash.duration = 0.3
